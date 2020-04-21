@@ -1,0 +1,151 @@
+---
+title: "Project4"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+
+### Step 1 Load Data and Train-test Split
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+data <- read.csv("../data/ml-latest-small/ratings.csv")
+set.seed(0)
+test_idx <- sample(1:nrow(data), round(nrow(data)/5, 0))
+train_idx <- setdiff(1:nrow(data), test_idx)
+data_train <- data[train_idx,]
+data_test <- data[test_idx,]
+```
+
+###Step 2 Matrix Factorization
+#### Step 2.1 A1+P3
+
+A1. [Stochastic Gradient Descent](./paper/P1 Recommender-Systems.pdf) Section: Learning Algorithms-Stochastic Gradient Descent
+
+A2. [Gradient Descent with Probabilistic Assumptions](./paper/P3 probabilistic-matrix-factorization.pdf) Section 2
+
+
+```{r}
+U <- length(unique(data$userId))
+I <- length(unique(data$movieId))
+source("../lib/Matrix_Factorization_A1.R")
+```
+
+
+#### Step 2.1.1 Parameter Tuning
+According to the cross validation, the best tunning patameterr is f=10, lambda= 0.1
+```{r}
+source("../lib/cross_validation.R")
+f_list <- seq(10, 20, 10)
+l_list <- seq(-2, -1, 1)
+f_l <- expand.grid(f_list, l_list)
+```
+
+
+```{r, eval=FALSE}
+result_summary_A1 <- array(NA, dim = c(nrow(f_l), 10, 4))
+run_time_A1 <- system.time(for(i in 1:nrow(f_l)){
+    par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
+    cat(par, "\n")
+    current_result_A1 <- cv.function(data, K = 5, f = f_l[i,1], lambda = 10^f_l[i,2])
+    result_summary_A1[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
+    print(result_summary_A1)
+  
+})
+
+save(result_summary_A1, file = "../output/rmse_A1.Rdata")
+```
+
+```{r}
+load("../output/rmse.Rdata")
+rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), train_test = rep(c("Train", "Test"), each = 4), par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>% gather("epoch", "RMSE", -train_test, -par)
+rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
+rmse %>% ggplot(aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + facet_grid(~par)
+```
+
+#### Step 2.1.2 Using the best parameter: f=10, lambda=0.1
+```{r, eval= FALSE}
+result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+                   data = data, train = data_train, test = data_test)
+
+save(result, file = "../output/mat_fac_A1.RData")
+
+```
+
+
+
+### Step 2.1.3 P3 Postprocessing
+After matrix factorization, postporcessing will be performed to improve accuracy.
+
+P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
+
+
+```{r}
+source('../lib/Post_Process_P3.r')
+load(file = "../output/mat_fac_A1.RData")
+
+pred_rating_A1=t(result$q) %*% result$p
+X=X_mat(result$q)
+n=nrow(X)
+lambda=0.5
+
+A=K(X,X)
+B=solve(K(X,X)+lambda*I)
+D=A%*%B
+E=D%*%pred_rating_A1
+dim(D)
+dim(pred_rating_A1)
+C=pred_rating_A1
+A1_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A1)
+
+#define a function to extract the corresponding predictedrating for the test set.
+extract_pred_rating <- function(test_set, pred){
+  pred_rating <- pred[as.character(test_set[2]), as.character(test_set[1])]
+  return(pred_rating)
+}
+#extract predicted rating
+pred_test_rating <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
+pred_test_rating=apply(data_test, 1, extract_pred_rating, E)
+A1_P3_rating=E
+```
+
+### Step 2.1.4 visualize training and testing RMSE by different epochs 
+
+```{r}
+
+library(ggplot2)
+library(tidyverse)
+
+RMSE <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result$train_RMSE, Test_MSE = result$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
+
+RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
+
+```
+
+
+```{r}
+rmse_mat=function(P,Y){
+  return (sqrt(mean((P-Y)^2)))
+}
+rmse_mat(P=pred_rating_A1,Y=A1_P3_rating)
+#mean(P)
+pred_mean <- mean(pred_test_rating)
+#mean(test)
+mean_test_rating <- mean(data_test$rating)
+
+#mean(test) - mean(P)
+mean_diff <- mean_test_rating - pred_mean
+
+data_test$pred <- pred_test_rating
+data_test$pred_adj <- pred_test_rating + mean_diff
+
+boxplot(data_test$pred_adj ~ data_test$rating)
+#calculate RMSE
+rmse_adj <- sqrt(mean((data_test$rating - data_test$pred_adj)^2))
+cat("The RMSE of the adjusted model is", rmse_adj)
+```
+
+Depending on your postprocessing method, you might want to cross-validate on some parameters related to the postprocessing. Don't forget to visualize the cross-validation process through graphs.
