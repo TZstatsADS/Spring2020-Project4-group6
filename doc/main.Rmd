@@ -7,7 +7,7 @@ output:
 ---
 
 
-### Step 1 Load Data and Train-test Split
+## Step 1 Load Data and Train-test Split
 ```{r}
 library(dplyr)
 library(tidyr)
@@ -20,12 +20,10 @@ data_train <- data[train_idx,]
 data_test <- data[test_idx,]
 ```
 
-###Step 2 Matrix Factorization
-#### Step 2.1 A1+P3
+## Step 2 Matrix Factorization
+### Step 2.1 A1+P3
 
 A1. [Stochastic Gradient Descent](./paper/P1 Recommender-Systems.pdf) Section: Learning Algorithms-Stochastic Gradient Descent
-
-
 
 ```{r}
 U <- length(unique(data$userId))
@@ -45,17 +43,17 @@ f_l <- expand.grid(f_list, l_list)
 
 
 ```{r, eval=FALSE}
-#result_summary_A1 <- array(NA, dim = c(nrow(f_l), 10, 4))
+result_summary_A1 <- array(NA, dim = c(nrow(f_l), 10, 4))
+run_time_A1 <- system.time(for(i in 1:nrow(f_l)){
+    par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
+    cat(par, "\n")
+    current_result_A1 <- cv.function(data, K = 5, f = f_l[i,1], lambda = 10^f_l[i,2])
+    result_summary_A1[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
+    print(result_summary_A1)
+  
+})
 
-#run_time_A1 <- system.time(for(i in 1:nrow(f_l)){
-    #par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
-    #cat(par, "\n")
-    #current_result <- cv.function(data, K = 5, f = f_l[i,1], lambda = 10^f_l[i,2])
-    #result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
-    #print(result_summary)
-#})
-
-#save(result_summary, file = "../output/rmse.Rdata")
+save(result_summary_A1, file = "../output/rmse_A1.Rdata")
 ```
 
 ```{r}
@@ -65,27 +63,18 @@ rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
 rmse %>% ggplot(aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + facet_grid(~par)
 ```
 
-#### Step 2.1.2 Using the best parameter: f=10, lambda=0.1 and save the result
+#### Step 2.1.2 Using the best parameter: f=10, lambda=0.1
 ```{r, eval= FALSE}
-#result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
-                   #data = data, train = data_train, test = data_test)
+result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+                   data = data, train = data_train, test = data_test)
 
-#save(result, file = "../output/mat_fac_A1.RData")
+save(result, file = "../output/mat_fac_A1.RData")
 
 ```
 
-### Step 2.1.3 Evaluation on the Model without Postprocessing
-visualize training and testing RMSE by different epochs
-```{r}
-load(file = "../output/mat_fac.RData")
-library(ggplot2)
 
-RMSE <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result$train_RMSE, Test_MSE = result$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
 
-RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
-```
-
-### Step 2.1.4 P3 Postprocessing
+#### Step 2.1.3 P3 Postprocessing
 After matrix factorization, postporcessing will be performed to improve accuracy.
 
 P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
@@ -99,11 +88,15 @@ pred_rating_A1=t(result$q) %*% result$p
 X=X_mat(result$q)
 n=nrow(X)
 lambda=0.5
-#A1_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A1)
-#save(A1_P3_rating,file='../output/A1_P3_rating.RData')
-#save the result to accelerate.
 
-load('../output/A1_P3_rating.RData')
+A=K(X,X)
+B=solve(K(X,X)+lambda*I)
+D=A%*%B
+E=D%*%pred_rating_A1
+dim(D)
+dim(pred_rating_A1)
+C=pred_rating_A1
+A1_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A1)
 
 #define a function to extract the corresponding predictedrating for the test set.
 extract_pred_rating <- function(test_set, pred){
@@ -111,7 +104,21 @@ extract_pred_rating <- function(test_set, pred){
   return(pred_rating)
 }
 #extract predicted rating
-pred_test_rating_A1 <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
+pred_test_rating <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
+pred_test_rating=apply(data_test, 1, extract_pred_rating, E)
+A1_P3_rating=E
+```
+
+#### Step 2.1.4 visualize training and testing RMSE by different epochs 
+
+```{r}
+
+library(ggplot2)
+library(tidyverse)
+
+RMSE <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result$train_RMSE, Test_MSE = result$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
+
+RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
 
 ```
 
@@ -120,25 +127,81 @@ pred_test_rating_A1 <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
 rmse_mat=function(P,Y){
   return (sqrt(mean((P-Y)^2)))
 }
-
+rmse_mat(P=pred_rating_A1,Y=A1_P3_rating)
 #mean(P)
-pred_mean_A1 <- mean(pred_test_rating_A1)
+pred_mean <- mean(pred_test_rating)
 #mean(test)
 mean_test_rating <- mean(data_test$rating)
 
 #mean(test) - mean(P)
-mean_diff <- mean_test_rating - pred_mean_A1
+mean_diff <- mean_test_rating - pred_mean
 
-data_test$pred <- pred_test_rating_A1
-data_test$pred_adj <- pred_test_rating_A1 + mean_diff
+data_test$pred <- pred_test_rating
+data_test$pred_adj <- pred_test_rating + mean_diff
 
 boxplot(data_test$pred_adj ~ data_test$rating)
 #calculate RMSE
-rmse_A1=rmse_mat(P=data_test$rating,Y=pred_rating_A1)
-rmse_A1_P3=rmse_mat(P=data_test$rating,Y=A1_P3_rating)
-
-cat("The RMSE of the adjusted model changes from ", rmse_A1, 'to',rmse_A1_P3)
+rmse_adj <- sqrt(mean((data_test$rating - data_test$pred_adj)^2))
+cat("The RMSE of the adjusted model is", rmse_adj)
 ```
 
-#### Step 2.2 A2+P3
+Depending on your postprocessing method, you might want to cross-validate on some parameters related to the postprocessing. Don't forget to visualize the cross-validation process through graphs.
+
+
+
+### Step 2.2 A2+P3
 A2. [Gradient Descent with Probabilistic Assumptions](./paper/P3 probabilistic-matrix-factorization.pdf) Section 2
+
+```{r}
+# Call A2 function
+source("../lib/Matrix_Factorization_A2.R")
+```
+
+#### Step 2.2.1 Parameter Tuning
+According to the cross validation, the best tunning patameterr is f=10, lambda= 0.1
+```{r}
+source("../lib/cross_validation_PMF.R")
+f_list_A2 <- c(10, 20)
+l_list_v <- c(0.01, 0.1)
+l_list_u <- c(0.01, 0.1)
+f_l_A2 <- expand.grid(f_list_A2, l_list_v, l_list_u)
+```
+
+```{r, eval=FALSE}
+result_summary_A2 <- array(NA, dim = c(4, 10, nrow(f_l_A2)))
+run_time_A2 <- system.time(for(i in 1:nrow(f_l_A2)){
+    par <- paste("f = ", f_l_A2[i,1], ", lambda = ", 10^f_l_A2[i,2])
+    cat(par, "\n")
+    current_result_A2 <- cv.function.pmf(data, K = 5, f = f_l_A2[i,1],lambda_v=f_l_A2[i,2], lambda_u=f_l_A2[i,3])
+    result_summary_A2[,,i] <- matrix(unlist(current_result_A2), ncol = 10, byrow = T) 
+    print(result_summary_A2)
+  })
+
+save(result_summary_A2, file = "../output/rmse_A2.Rdata")
+```
+
+```{r}
+load("../output/rmse_A2.Rdata")
+rmse_A2 <- data.frame(rbind(t(result_summary_A2[1,,]), t(result_summary_A2[2,,])), 
+                   train_test = rep(c("Train", "Test"), each = 8), 
+                   par = rep(paste("f = ", f_l_A2[,1], ", lambda_u = ", f_l_A2[,2], 'lambda_v = ', f_l_A2[,3]), times = 2)) %>% 
+  gather("epoch", "RMSE", -train_test, -par)
+
+rmse_A2$epoch <- as.numeric(gsub("X", "", rmse_A2$epoch))
+rmse_A2 %>% ggplot(aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + facet_grid(~par)
+```
+
+#### Step 2.2.2 Using the best parameter: f=10, lambda=0.1 //f and lambda change
+```{r, eval= FALSE}
+result_A2 <- pmf(f = 10, lambda_v = 0.3, lambda_u = 0.3,
+                lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+                   data = data, train = data_train, test = data_test) ##f and lambda change
+
+save(result_A2, file = "../output/mat_fac_A2.RData")
+
+```
+
+#### Step 2.2.3 P3 Postprocessing
+After matrix factorization, postporcessing will be performed to improve accuracy.
+
+P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
