@@ -89,24 +89,16 @@ X=X_mat(result$q)
 n=nrow(X)
 lambda=0.5
 
-A=K(X,X)
-B=solve(K(X,X)+lambda*I)
-D=A%*%B
-E=D%*%pred_rating_A1
-dim(D)
-dim(pred_rating_A1)
-C=pred_rating_A1
-A1_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A1)
-
+#A1_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A1)
+#save(A1_P3_rating,file='../output/A1_P3_rating.RData')
+load('../output/A1_P3_rating.RData')
 #define a function to extract the corresponding predictedrating for the test set.
 extract_pred_rating <- function(test_set, pred){
   pred_rating <- pred[as.character(test_set[2]), as.character(test_set[1])]
   return(pred_rating)
 }
 #extract predicted rating
-pred_test_rating <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
-pred_test_rating=apply(data_test, 1, extract_pred_rating, E)
-A1_P3_rating=E
+pred_test_rating_A1 <- apply(data_test, 1, extract_pred_rating, A1_P3_rating)
 ```
 
 #### Step 2.1.4 visualize training and testing RMSE by different epochs 
@@ -127,25 +119,25 @@ RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + 
 rmse_mat=function(P,Y){
   return (sqrt(mean((P-Y)^2)))
 }
-rmse_mat(P=pred_rating_A1,Y=A1_P3_rating)
+
 #mean(P)
-pred_mean <- mean(pred_test_rating)
+pred_mean_A1 <- mean(pred_test_rating_A1)
 #mean(test)
 mean_test_rating <- mean(data_test$rating)
 
 #mean(test) - mean(P)
-mean_diff <- mean_test_rating - pred_mean
+mean_diff_A1 <- mean_test_rating - pred_mean_A1
 
-data_test$pred <- pred_test_rating
-data_test$pred_adj <- pred_test_rating + mean_diff
+data_test$pred_A1 <- pred_test_rating_A1
+data_test$pred_adj1 <- pred_test_rating_A1 + mean_diff_A1
 
-boxplot(data_test$pred_adj ~ data_test$rating)
+boxplot(data_test$pred_adj1 ~ data_test$rating)
 #calculate RMSE
-rmse_adj <- sqrt(mean((data_test$rating - data_test$pred_adj)^2))
-cat("The RMSE of the adjusted model is", rmse_adj)
-```
+rmse_a1=rmse_mat(P=pred_rating_A1,Y=data_test$rating)
+rmse_a1_p3=rmse_mat(P=A1_P3_rating,Y=data_test$rating)
 
-Depending on your postprocessing method, you might want to cross-validate on some parameters related to the postprocessing. Don't forget to visualize the cross-validation process through graphs.
+cat("The RMSE of the adjusted model changes from", rmse_a1, ' to ',rmse_a1_p3)
+```
 
 
 
@@ -205,3 +197,46 @@ save(result_A2, file = "../output/mat_fac_A2.RData")
 After matrix factorization, postporcessing will be performed to improve accuracy.
 
 P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
+```{r}
+source('../lib/Post_Process_P3.R')
+load("../output/mat_fac_A2.RData")
+pred_rating_A2=t(result_A2$q) %*% result$p
+X=X_mat(result_A2$q)
+n=nrow(X)
+lambda=0.5
+
+A2_P3_rating=svd_krr(n=n,lambda=lambda,X=X,y=pred_rating_A2)
+save(A2_P3_rating,file = '../output/A2_P3_rating.RData')
+pred_test_rating_A2 <- apply(data_test, 1, extract_pred_rating, A2_P3_rating)
+```
+#### Step 2.2.4 visualize training and testing RMSE by different epochs 
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+RMSE_A2 <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result_A2$train_RMSE, Test_MSE = result_A2$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
+
+RMSE_A2 %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
+```
+
+```{r}
+
+#mean(P)
+pred_mean_A2 <- mean(pred_test_rating_A2)
+#mean(test)
+mean_test_rating <- mean(data_test$rating)
+
+#mean(test) - mean(P)
+mean_diff_A2 <- mean_test_rating - pred_mean_A2
+
+data_test$pred_A2 <- pred_test_rating_A2
+data_test$pred_adj2 <- pred_test_rating_A2 + mean_diff_A2
+
+boxplot(data_test$pred_adj2 ~ data_test$rating)
+#calculate RMSE
+rmse_a2=rmse_mat(P=pred_rating_A2,Y=data_test$rating)
+rmse_a2_p3=rmse_mat(P=A2_P3_rating,Y=data_test$rating)
+
+cat("The RMSE of the adjusted model changes from", rmse_a2, ' to ',rmse_a2_p3)
+```
+
