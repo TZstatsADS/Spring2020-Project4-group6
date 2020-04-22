@@ -564,8 +564,8 @@ rmse_A2 %&gt;% ggplot(aes(x = epoch, y = RMSE, col = train_test)) + geom_point()
 ## 7 f =  20 , lambda_u =  0.1 lambda_v =  0.01   1.50
 ## 8 f =  20 , lambda_u =  0.01 lambda_v =  0.01  1.52</code></pre>
 </div>
-<div id="step-2.2.2-using-the-best-parameter-f10-lambda_u-0.01-lambda_v-0.1." class="section level4">
-<h4>Step 2.2.2 Using the best parameter: f=10, lambda_u = 0.01, lambda_v = 0.1.</h4>
+<div id="step-2.2.2-using-the-parameter-f10-lambda_u-0.01-lambda_v-0.1" class="section level4">
+<h4>Step 2.2.2 Using the parameter: f=10, lambda_u = 0.01, lambda_v = 0.1</h4>
 <pre class="r"><code>result_A2 &lt;- pmf(f = 10, lambda_v = 0.1, lambda_u = 0.01,
                 lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
                    data = data, train = data_train, test = data_test) ##f and lambda change
@@ -590,7 +590,7 @@ load('../output/A2_P3_rating.RData')
 pred_test_rating_A2 &lt;- apply(data_test, 1, extract_pred_rating, A2_P3_rating)</code></pre>
 </div>
 <div id="step-2.2.4-visualize-training-and-testing-rmse-by-different-epochs" class="section level4">
-<h4>Step 2.2.4 visualize training and testing RMSE by different epochs</h4>
+<h4>Step 2.2.4 Visualize training and testing RMSE by different epochs</h4>
 <pre class="r"><code>RMSE_A2 &lt;- data.frame(epochs = seq(10, 100, 10), Training_MSE = result_A2$train_RMSE, Test_MSE = result_A2$test_RMSE) %&gt;% gather(key = train_or_test, value = RMSE, -epochs)
 
 RMSE_A2 %&gt;% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))</code></pre>
