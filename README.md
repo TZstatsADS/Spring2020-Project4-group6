@@ -13,7 +13,8 @@ Term: Spring 2020
 	+ Tianning Yu
 	+ Ziyun Liu
 	
-+ Project summary: Our goal is to compare two algorithms for recommender system. Specifically, we implement, compare and evaluate the performance of Stochastic Gradient Descent and Probabilistic Matrix Factorization after the postprocessing of Kernel Ridge Regression. 
++ Project summary: Our goal is to compare two algorithms for recommender system. Specifically, we implement, compare and evaluate the performance of Stochastic Gradient Descent and Probabilistic Matrix Factorization after the postprocessing of Kernel Ridge Regression. By comparison, the RMSE of Stochastic Gradient Descent given kernel ridge regression is 1.4659, while the RMSE of  Probabilistic Matrix Factorization given kernel ridge regression is 1.3984. Therefore, Probabilistic Matrix Factorization given kernel ridge regression is better. 
+
 	
 **Contribution statement**: [default] All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
 
