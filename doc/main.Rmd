@@ -47,7 +47,7 @@ result_summary_A1 <- array(NA, dim = c(nrow(f_l), 10, 4))
 run_time_A1 <- system.time(for(i in 1:nrow(f_l)){
     par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
     cat(par, "\n")
-    current_result_A1 <- cv.function(data, K = 5, f = f_l[i,1], lambda = 10^f_l[i,2])
+    current_result_A1 <- cv.function(data_train, K = 5, f = f_l[i,1], lambda = 10^f_l[i,2])
     result_summary_A1[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
     print(result_summary_A1)
   
@@ -57,7 +57,7 @@ save(result_summary_A1, file = "../output/rmse_A1.Rdata")
 ```
 
 ```{r}
-load("../output/rmse.Rdata")
+load("../output/rmse_A1.Rdata")
 rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), train_test = rep(c("Train", "Test"), each = 4), par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>% gather("epoch", "RMSE", -train_test, -par)
 rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
 rmse %>% ggplot(aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + facet_grid(~par)
@@ -172,7 +172,7 @@ result_summary_A2 <- array(NA, dim = c(4, 10, nrow(f_l_A2)))
 run_time_A2 <- system.time(for(i in 1:nrow(f_l_A2)){
     par <- paste("f = ", f_l_A2[i,1], ", lambda = ", 10^f_l_A2[i,2])
     cat(par, "\n")
-    current_result_A2 <- cv.function.pmf(data, K = 5, f = f_l_A2[i,1],lambda_v=f_l_A2[i,2], lambda_u=f_l_A2[i,3])
+    current_result_A2 <- cv.function.pmf(data_train, K = 5, f = f_l_A2[i,1],lambda_v=f_l_A2[i,2], lambda_u=f_l_A2[i,3])
     result_summary_A2[,,i] <- matrix(unlist(current_result_A2), ncol = 10, byrow = T) 
     print(result_summary_A2)
   })
