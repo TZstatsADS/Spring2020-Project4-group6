@@ -14,8 +14,8 @@ pmf <- function(f = 10, lambda_v = 0.3, lambda_u = 0.3,
                 data, train, test){
   set.seed(0)
   #random assign value to matrix p and q
-  U = length(data$userId %>% unique())
-  I = length(data$movieId %>% unique())
+  U = length(unique(data$userId))
+  I = length(unique(data$movieId))
   p <- matrix(runif(f*U, -1, 1), ncol = U) 
   colnames(p) <- as.character(1:U)
   q <- matrix(runif(f*I, -1, 1), ncol = I)

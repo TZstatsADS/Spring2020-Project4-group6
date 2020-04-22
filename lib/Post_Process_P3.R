@@ -1,4 +1,8 @@
+if(!require("pracma")){
+  install.packages("pracma")
+}
 library(pracma)
+
 K=function(x_i_t,x_j_t){
   return (exp(2*(x_i_t%*%t(x_j_t)-1)))
 }
