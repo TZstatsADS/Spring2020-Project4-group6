@@ -17,8 +17,10 @@ Term: Spring 2020
 
 	
 **Contribution statement**: 
++ Jinxiao Du: Joined the group meeting
 + Qing Gao: Implemented the algorithm of Probabilistic Matrix Factorization, formatted the final main.rmd, generated the presentation slides
 + Ruiqi Xie: Implemented the algorithm of  Stochastic Gradient Descent and did postprocessing of kernel ridge regression on both algorithm, contributed to the organization of main.rmd, contributed to the presentation slides
++ Tianning Yu: Joined the group meeting
 + Ziyun Liu: Implemented the algorithm of Probabilistic Matrix Factorization, contributed to the explanations in the main.rmd, delivered the presentation
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
